@@ -1,5 +1,15 @@
 from fastapi import FastAPI , HTTPException
-app = FastAPI()
+from schema import PostCreate
+from db import Post , create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
+from contextlib import asynccontextmanager
+from db import create_db_and_tables
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await create_db_and_tables()
+    yield
+app = FastAPI(lifespan=lifespan)
+
 
 text_posts = {
     1: {"title": "First Post", "content": "Welcome to our journey — the adventure begins now!"},
@@ -36,3 +46,10 @@ def get_post(id:int):
     if id not in text_posts:
         raise HTTPException(status_code=404, detail="Shut the fuck up")
     return text_posts.get(id)
+
+
+@app.post("/posts")
+def create_post(post : PostCreate):
+    new_post = {"title" : post.title , "content" : post.content}
+    text_posts[max(text_posts.keys())+1]=new_post
+    return new_post
